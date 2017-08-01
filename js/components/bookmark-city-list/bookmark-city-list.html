@@ -1,0 +1,196 @@
+<link rel="import" href="../../lib/bower_components/polymer/polymer.html">
+<link rel='import' href='../../lib/bower_components/paper-toolbar/paper-toolbar.html' />
+<link rel="import" href="../../lib/bower_components/paper-item/all-imports.html">
+<link rel="import" href="../../lib/bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../../lib/bower_components/iron-icons/iron-icons.html">
+<link rel="import" href="../../lib/bower_components/paper-button/paper-button.html">
+<link rel='import' href='../../lib/bower_components/paper-input/paper-input.html' />
+<link rel='import' href='../../lib/bower_components/paper-dialog/paper-dialog.html' />
+<link rel="import" href="../../lib/bower_components/paper-toast/paper-toast.html">
+<link rel='import' href='../../lib/bower_components/app-layout/app-toolbar/app-toolbar.html'>
+
+<script src="Bookmark.js"></script>
+
+<dom-module id="bookmark-city-list">
+    <style>
+        #listDiv {
+            max-height: 318px;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+
+        paper-item {
+            margin: 4px;
+            box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12), 0 3px 1px -2px rgba(0, 0, 0, 0.2);
+            padding: 5px;
+            margin: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        paper-item:hover #btnAdd {
+            fill: green;
+        }
+
+        paper-icon-button {
+            --paper-icon-button-ink-color: white;
+        }
+
+        paper-item paper-icon-button {
+            --paper-icon-button-ink-color: Grey;
+        }
+
+        paper-item paper-icon-button:hover {
+            color: orangered;
+        }
+
+        app-toolbar {
+            background-color: #00897B;
+            color: #fff;
+            font-family: 'Roboto', 'Noto', sans-serif;
+        }
+
+        paper-dialog {
+            width: 300px;
+        }
+
+        paper-dialog app-toolbar {
+            background-color: #00897B;
+            color: #fff;
+        }
+
+        .paper-dialog-0>*:first-child {
+            margin-top: 0px;
+        }
+
+        paper-button {
+            background-color: #00c853;
+            color: #fff !important;
+        }
+
+        paper-toast {
+            font-size: 16px;
+        }
+
+        .yellow-button {
+            color: #ffb300 !important;
+            background-color: transparent !important;
+        }
+
+        paper-button.cancel {
+            background-color: #e53935;
+        }
+    </style>
+    <template>
+        <app-toolbar>
+            <div main-title>Favorite Cities</div>
+            <paper-icon-button icon="add" on-click='showAddCityDialog'></paper-icon-button>
+        </app-toolbar>
+        <div id="listDiv" role="listbox">
+            <template id="repeater" is="dom-repeat" items="{{ cities }}">
+                <paper-item>
+                    <paper-item-body on-click="moveMap">
+                        <div>{{ item.name }}</div>
+                        <div secondary>{{ item.description }}</div>
+                    </paper-item-body>
+
+                    <paper-icon-button icon="remove" on-click="deleteCity"></paper-icon-button>
+                </paper-item>
+            </template>
+        </div>
+        <paper-dialog id='addCityDialog' modal>
+            <app-toolbar>
+                <div main-title>Add City</div>
+            </app-toolbar>
+            <paper-input label='Name' value='{{ cityName }}'>
+            </paper-input>
+            <paper-input label='Description' value='{{ cityDescription }}'>
+            </paper-input>
+            <div class='buttons'>
+                <paper-button raised on-click='addCity'>Add</paper-button>
+                <paper-button raised on-click='closeDialog' class="cancel">Cancel</paper-button>
+            </div>
+        </paper-dialog>
+        <paper-toast id="toast" class="fit-bottom" duration="3000" text="City saved correctly."></paper-toast>
+        <paper-toast id="toast1" duration="3500" class="fit-bottom" text="City removed.">
+            <paper-button on-click="deshacer" class="yellow-button">Undo</paper-button>
+        </paper-toast>
+    </template>
+
+    <script>
+        Polymer({
+            is: "bookmark-city-list",
+            ready: function () {
+                this.cities = [];
+            },
+            showAddCityDialog: function () {
+                this.$.addCityDialog.open();
+            },
+            addCity: function () {
+                var map = document.getElementById("basic-map");
+                var view = map.map.getView();
+                var position = [view.getCenter()[0], view.getCenter()[1]];
+                var nuevaCiudad = new Bookmark(this.cityName, this.cityDescription, position, view.getZoom());
+
+                var city = {
+                    name: nuevaCiudad.name,
+                    description: nuevaCiudad.description,
+                    center: nuevaCiudad.center,
+                    zoom: nuevaCiudad.zoom
+                };
+                localStorage.setItem(this.cityName, JSON.stringify(city));
+
+                this.closeDialog();
+                this.updateCities();
+                this.$.toast.open()
+
+            },
+            closeDialog: function () {
+                this.$.addCityDialog.close();
+                this.cityName = "";
+                this.cityDescription = "";
+            },
+            updateCities: function () {
+                this.splice("cities", 0);
+                for (var ciudad in localStorage) {
+                    if (ciudad != "CityRemoved") {
+                        var ciudadParsed = JSON.parse(localStorage.getItem(ciudad));
+                        var city = {
+                            name: ciudadParsed.name,
+                            description: ciudadParsed.description,
+                            center: ciudadParsed.center,
+                            zoom: ciudadParsed.zoom
+                        }
+                        this.push("cities", city);
+                    }
+                }
+
+            },
+            moveMap: function (e) {
+
+                this.fire("animate", { center: e.model.item.center, duration: 4000, zoom: e.model.item.zoom });
+
+            },
+            deleteCity: function (e) {
+                var a = localStorage.getItem(e.model.item.name);
+                console.log("Name: " + e.model.item.name);
+                localStorage.setItem("CityRemoved", JSON.stringify(e.model.item));
+
+                localStorage.removeItem(e.model.item.name);
+                this.updateCities();
+                this.$.toast1.open()
+            },
+            deshacer: function () {
+                var cityRemoved = localStorage.getItem("CityRemoved");
+                console.log(cityRemoved);
+                localStorage.setItem(JSON.parse(cityRemoved).name, cityRemoved);
+                this.$.toast1.close()
+                this.updateCities();
+            },
+            attached: function () {
+                this.updateCities();
+            }
+
+        });
+    </script>
+</dom-module>

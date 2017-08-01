@@ -1,0 +1,63 @@
+<link rel="import" href="../../lib/bower_components/polymer/polymer.html">
+<script src="Mapa.js"></script>
+<link rel="stylesheet" href="https://openlayers.org/en/v4.2.0/css/ol.css" type="text/css">
+<!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+<script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+<script src="https://openlayers.org/en/v4.2.0/build/ol.js"></script>
+
+<dom-module id="basic-map">
+    <style>
+        #animation-to-paris {
+            margin-top: -15px;
+            z-index: 100;
+        }
+
+        #wrapperMap {
+            z-index: 0;
+            height: 50%;
+
+        }
+    </style>
+    <template>
+        <div id="wrapperMap"></div>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: "basic-map",
+
+            properties: {
+                zoom: {
+                    type: String,
+                    value: "5"
+                },
+                center: {
+                    type: String,
+                    value: "0,0"
+                },
+                map: {
+                    type: Mapa
+                }
+            },
+
+            attached: function () {
+                document.addEventListener("WebComponentsReady", function (evt) {
+                    this.map = new Mapa(parseInt(this.zoom), "wrapperMap", this.center);
+                }.bind(this));
+
+                document.addEventListener("animate", function (evt) {
+                    var view = this.map.getView();
+                    
+                    this.map.flyTo(evt.detail.center, function() {}, view, evt.detail.zoom != undefined ? evt.detail.zoom : 10);
+                    /*view.animate({
+                        center: evt.detail.center,
+                        duration: evt.detail.duration,
+                        zoom: evt.detail.zoom != undefined ? evt.detail.zoom : 10
+                    });*/
+
+                }.bind(this))
+            }
+        });
+    </script>
+</dom-module>
